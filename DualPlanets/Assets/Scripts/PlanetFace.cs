@@ -5,22 +5,23 @@ using System;
 
 public class PlanetFace
 {
-
+    PlanetShapeGenerator shapeGenerator;
     Mesh mesh;
     int resolution;
     Vector3 normal;
     Vector3 tangent;
     Vector3 bitangent;
 
-    public PlanetFace(Mesh _mesh, int _resolution, Vector3 _localUp)
+    public PlanetFace(PlanetShapeGenerator generator, Mesh _mesh, int _resolution, Vector3 _localUp)
     {
+        shapeGenerator = generator;
+
         mesh = _mesh;
         resolution = _resolution;
         normal = _localUp.normalized;
 
         tangent = new Vector3(normal.y, normal.z, normal.x).normalized;
         bitangent = Vector3.Cross(normal, tangent).normalized;
-
     }
 
     public void ConstructMesh()
@@ -41,77 +42,80 @@ public class PlanetFace
 
                 Vector3 pointOnSphere;
 
-                if (percent.x == 0.5 && percent.y == 0.5)
+                if (true)
                 {
-                    pointOnSphere = normal;
-                }
-                else if (percent.y == 0.5f)
-                {
-                    pointOnSphere = Quaternion.AngleAxis((percent.x - 0.5f) * 90.0f, tangent) * normal;
-                }
-                else if (percent.x == 0.5f)
-                {
-                    pointOnSphere = Quaternion.AngleAxis((percent.y - 0.5f) * 90.0f, bitangent) * normal;
-                }
-                else
-                {
-
-                    Vector3 rotOnTan = Quaternion.AngleAxis((percent.x - 0.5f) * 90.0f, tangent) * normal;
-                    Vector3 planeANorm = Vector3.Cross(rotOnTan, tangent).normalized;
-                    Vector3 rotOnBitan = Quaternion.AngleAxis((percent.y - 0.5f) * 90.0f, bitangent) * normal;
-                    Vector3 planeBNorm = Vector3.Cross(rotOnBitan, bitangent).normalized;
-
-                    bool swapped = false;
-                    if (planeANorm.x == 0)
+                    if (percent.x == 0.5 && percent.y == 0.5)
                     {
-                        if (planeBNorm.x == 0)
-                        {
-                            Debug.LogError("No x is non-zero.");
-                            return;
-                        }
-                        else
-                        {
-                            Vector3 temp = planeBNorm;
-                            planeBNorm = planeANorm;
-                            planeANorm = temp;
-                            swapped = true;
-                        }
+                        pointOnSphere = normal;
                     }
-                    float hDenom = planeBNorm.y * planeANorm.x - planeBNorm.x * planeANorm.y;
-                    if (hDenom == 0)
+                    else if (percent.y == 0.5f)
                     {
-                        Debug.LogError("H denominator borked.");
-                        return;
+                        pointOnSphere = Quaternion.AngleAxis((percent.x - 0.5f) * 90.0f, tangent) * normal;
                     }
-
-                    float hValue = (planeANorm.z * planeBNorm.x - planeANorm.x * planeBNorm.z) / hDenom;
-                    float gValue = ((-planeANorm.y) * hValue - planeANorm.z) / planeANorm.x;
-
-                    float kDenom = gValue * gValue + hValue * hValue + 1;
-                    if (kDenom == 0)
+                    else if (percent.x == 0.5f)
                     {
-                        Debug.LogError("Denominator of k has encountered a problem.");
-                        return;
-                    }
-                    float kValue = Mathf.Sqrt(1.0f / kDenom);
-
-                    Vector3 test1 = new Vector3(gValue * kValue, hValue * kValue, kValue);
-                    if (Vector3.Dot(test1, normal) > 0)
-                    {
-                        pointOnSphere = test1;
+                        pointOnSphere = Quaternion.AngleAxis((percent.y - 0.5f) * 90.0f, bitangent) * normal;
                     }
                     else
                     {
-                        pointOnSphere = new Vector3(-gValue * kValue, -hValue * kValue, -kValue);
+
+                        Vector3 rotOnTan = Quaternion.AngleAxis((percent.x - 0.5f) * 90.0f, tangent) * normal;
+                        Vector3 planeANorm = Vector3.Cross(rotOnTan, tangent).normalized;
+                        Vector3 rotOnBitan = Quaternion.AngleAxis((percent.y - 0.5f) * 90.0f, bitangent) * normal;
+                        Vector3 planeBNorm = Vector3.Cross(rotOnBitan, bitangent).normalized;
+                        
+                        if (planeANorm.x == 0)
+                        {
+                            if (planeBNorm.x == 0)
+                            {
+                                Debug.LogError("No x is non-zero.");
+                                return;
+                            }
+                            else
+                            {
+                                Vector3 temp = planeBNorm;
+                                planeBNorm = planeANorm;
+                                planeANorm = temp;
+                            }
+                        }
+                        float hDenom = planeBNorm.y * planeANorm.x - planeBNorm.x * planeANorm.y;
+                        if (hDenom == 0)
+                        {
+                            Debug.LogError("H denominator borked.");
+                            return;
+                        }
+
+                        float hValue = (planeANorm.z * planeBNorm.x - planeANorm.x * planeBNorm.z) / hDenom;
+                        float gValue = ((-planeANorm.y) * hValue - planeANorm.z) / planeANorm.x;
+
+                        float kDenom = gValue * gValue + hValue * hValue + 1;
+                        if (kDenom == 0)
+                        {
+                            Debug.LogError("Denominator of k has encountered a problem.");
+                            return;
+                        }
+                        float kValue = Mathf.Sqrt(1.0f / kDenom);
+
+                        Vector3 test1 = new Vector3(gValue * kValue, hValue * kValue, kValue);
+                        if (Vector3.Dot(test1, normal) > 0)
+                        {
+                            pointOnSphere = test1;
+                        }
+                        else
+                        {
+                            pointOnSphere = new Vector3(-gValue * kValue, -hValue * kValue, -kValue);
+                        }
+
+                        pointOnSphere = pointOnSphere.normalized;
                     }
-
-                    pointOnSphere = pointOnSphere.normalized;
                 }
+                else
+                {
+                    Vector3 pointOnCube = normal + (percent.x - 0.5f) * 2.0f * tangent + (percent.y - 0.5f) * 2.0f * bitangent;
 
-                // Vector3 pointOnCube = normal + (percent.x - 0.5f) * 2.0f * tangent + (percent.y - 0.5f) * 2.0f * bitangent;
-
-                // Vector3 pointOnSphere = pointOnCube.normalized;
-                vertices[vCount] = pointOnSphere;
+                    pointOnSphere = pointOnCube.normalized;
+                }
+                vertices[vCount] = shapeGenerator.CalculatePointOnPlanet(pointOnSphere);
                 norms[vCount] = pointOnSphere;
 
                 if (!(y == resolution - 1 || x == resolution - 1))
@@ -133,6 +137,7 @@ public class PlanetFace
         mesh.Clear();
         mesh.vertices = vertices;
         mesh.triangles = tris;
-        mesh.normals = norms;
+        //mesh.normals = norms;
+        mesh.RecalculateNormals();
     }
 }
